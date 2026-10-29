@@ -1,0 +1,375 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_microsoftforms": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "edghl_sharedmicrosoftforms_0585b"
+        },
+        "api": {
+          "name": "shared_microsoftforms"
+        }
+      },
+      "shared_sharepointonline": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "edghl_sharedsharepointonline_7cded"
+        },
+        "api": {
+          "name": "shared_sharepointonline"
+        }
+      },
+      "shared_approvals": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "edghl_sharedapprovals_8d1a8"
+        },
+        "api": {
+          "name": "shared_approvals"
+        }
+      },
+      "shared_office365": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "edghl_sharedoffice365_0cfdf"
+        },
+        "api": {
+          "name": "shared_office365"
+        }
+      },
+      "shared_teams-1": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "edghl_sharedteams_38a95"
+        },
+        "api": {
+          "name": "shared_teams"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "When_a_new_response_is_submitted": {
+          "splitOn": "@triggerOutputs()?['body/value']",
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "parameters": {
+              "form_id": "owPtDy1AM0aozYswiCIlPqjSpRDLpalHqNCapU7wucFUM1NHUzdFOEkyOVFMSFNQVkpRVVBTN0xMWi4u"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_microsoftforms",
+              "operationId": "CreateFormWebhook",
+              "connectionName": "shared_microsoftforms"
+            }
+          }
+        }
+      },
+      "actions": {
+        "Get_response_details": {
+          "runAfter": {},
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "form_id": "owPtDy1AM0aozYswiCIlPqjSpRDLpalHqNCapU7wucFUM1NHUzdFOEkyOVFMSFNQVkpRVVBTN0xMWi4u",
+              "response_id": "@triggerOutputs()?['body/resourceData/responseId']"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_microsoftforms",
+              "operationId": "GetFormResponseById",
+              "connectionName": "shared_microsoftforms"
+            }
+          }
+        },
+        "DSR": {
+          "runAfter": {
+            "Get_response_details": [
+              "Succeeded"
+            ]
+          },
+          "type": "Compose",
+          "inputs": "@mul(div(add(float(outputs('Get_response_details')?['body/r202c859de80c49eeabc9465fe142777b']), float(outputs('Get_response_details')?['body/rc624e89f3d174b5ab9a9acbff454b87b'])), float(outputs('Get_response_details')?['body/r6e16afd17f9f43899276f11ef2261966'])), 100)"
+        },
+        "Create_item": {
+          "runAfter": {
+            "DSR": [
+              "Succeeded"
+            ]
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://cloudmails-my.sharepoint.com/personal/tp080992_mail_apu_edu_my",
+              "table": "b2e3acb0-1644-4929-9c91-9de91de43632",
+              "item/Title": "@outputs('Get_response_details')?['body/r0b1aa8dba74348e3a802a9791e110a76']",
+              "item/Email": "@outputs('Get_response_details')?['body/r4a0eb767ab12448cb4620f4be44be8ee']",
+              "item/NetIncome": "@float(outputs('Get_response_details')?['body/r6e16afd17f9f43899276f11ef2261966'])",
+              "item/ExistingCommitments": "@float(outputs('Get_response_details')?['body/r202c859de80c49eeabc9465fe142777b'])",
+              "item/NewInstallment": "@float(outputs('Get_response_details')?['body/rc624e89f3d174b5ab9a9acbff454b87b'])",
+              "item/DSR": "@outputs('DSR')",
+              "item/DocsProvided": "@outputs('Get_response_details')?['body/r2d461089bf2c4fb3b7ccaf7d1ef6a5a9']",
+              "item/Status/Value": "Submitted"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "operationId": "PostItem",
+              "connectionName": "shared_sharepointonline"
+            }
+          }
+        },
+        "Docs_complete": {
+          "actions": {
+            "DSR_over_60": {
+              "actions": {
+                "Set_Flagged": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://cloudmails-my.sharepoint.com/personal/tp080992_mail_apu_edu_my",
+                      "table": "b2e3acb0-1644-4929-9c91-9de91de43632",
+                      "id": "@outputs('Create_item')?['body/ID']",
+                      "item/Status/Value": "Flagged"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "PatchItem",
+                      "connectionName": "shared_sharepointonline"
+                    }
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "expression": {
+                "and": [
+                  {
+                    "greater": [
+                      "@float(outputs('DSR'))",
+                      60
+                    ]
+                  }
+                ]
+              },
+              "type": "If"
+            },
+            "Reviewer_approval": {
+              "runAfter": {
+                "DSR_over_60": [
+                  "Succeeded"
+                ]
+              },
+              "type": "OpenApiConnectionWebhook",
+              "inputs": {
+                "parameters": {
+                  "approvalType": "Basic",
+                  "WebhookApprovalCreationInput/title": "Loan application: @{outputs('Get_response_details')?['body/r0b1aa8dba74348e3a802a9791e110a76']}",
+                  "WebhookApprovalCreationInput/assignedTo": "TP080992@mail.apu.edu.my;",
+                  "WebhookApprovalCreationInput/details": "@   concat('DSR: ', formatNumber(float(outputs('DSR')), '0.0'), '%')",
+                  "WebhookApprovalCreationInput/itemLink": "@outputs('Create_item')?['body/{Link}']",
+                  "WebhookApprovalCreationInput/itemLinkDescription": "Open in list",
+                  "WebhookApprovalCreationInput/enableNotifications": true,
+                  "WebhookApprovalCreationInput/enableReassignment": true
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_approvals",
+                  "operationId": "StartAndWaitForAnApproval",
+                  "connectionName": "shared_approvals"
+                }
+              }
+            },
+            "Approved": {
+              "actions": {
+                "Set_Approved": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://cloudmails-my.sharepoint.com/personal/tp080992_mail_apu_edu_my",
+                      "table": "b2e3acb0-1644-4929-9c91-9de91de43632",
+                      "id": "@outputs('Create_item')?['body/ID']",
+                      "item/Status/Value": "Approved",
+                      "item/ReviewerComments": "@first(outputs('Reviewer_approval')?['body/responses'])?['comments']"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "PatchItem",
+                      "connectionName": "shared_sharepointonline"
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "Reviewer_approval": [
+                  "Succeeded"
+                ]
+              },
+              "else": {
+                "actions": {
+                  "Set_Rejected": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "dataset": "https://cloudmails-my.sharepoint.com/personal/tp080992_mail_apu_edu_my",
+                        "table": "b2e3acb0-1644-4929-9c91-9de91de43632",
+                        "id": "@outputs('Create_item')?['body/ID']",
+                        "item/Status/Value": "Rejected",
+                        "item/ReviewerComments": "@first(outputs('Reviewer_approval')?['body/responses'])?['comments']"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                        "operationId": "PatchItem",
+                        "connectionName": "shared_sharepointonline"
+                      }
+                    }
+                  }
+                }
+              },
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@outputs('Reviewer_approval')?['body/outcome']",
+                      "Approve"
+                    ]
+                  }
+                ]
+              },
+              "type": "If"
+            },
+            "Email_decision": {
+              "runAfter": {
+                "Approved": [
+                  "Succeeded"
+                ]
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "emailMessage/To": "@outputs('Get_response_details')?['body/r4a0eb767ab12448cb4620f4be44be8ee']",
+                  "emailMessage/Subject": "Update on your loan application",
+                  "emailMessage/Body": "<p class=\"editor-paragraph\">Hi @{outputs('Get_response_details')?['body/r0b1aa8dba74348e3a802a9791e110a76']}, a decision has been made on your loan application. Decision: @{outputs('Reviewer_approval')?['body/outcome']}.'</p>",
+                  "emailMessage/Importance": "Normal"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                  "operationId": "SendEmailV2",
+                  "connectionName": "shared_office365"
+                }
+              }
+            },
+            "Teams_summary": {
+              "runAfter": {
+                "Email_decision": [
+                  "Succeeded"
+                ]
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "poster": "Flow bot",
+                  "location": "Chat with Flow bot",
+                  "body/recipient": "TP080992@mail.apu.edu.my",
+                  "body/messageBody": "<p class=\"editor-paragraph\">Loan application from @{outputs('Get_response_details')?['body/r0b1aa8dba74348e3a802a9791e110a76']}: @{outputs('Reviewer_approval')?['body/outcome']} (DSR @{   formatNumber(float(outputs('DSR')), '0.0')}%)'</p>"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams",
+                  "operationId": "PostMessageToConversation",
+                  "connectionName": "shared_teams-1"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Create_item": [
+              "Succeeded"
+            ]
+          },
+          "else": {
+            "actions": {
+              "Set_Incomplete": {
+                "type": "OpenApiConnection",
+                "inputs": {
+                  "parameters": {
+                    "dataset": "https://cloudmails-my.sharepoint.com/personal/tp080992_mail_apu_edu_my",
+                    "table": "b2e3acb0-1644-4929-9c91-9de91de43632",
+                    "id": "@outputs('Create_item')?['body/ID']",
+                    "item/Status/Value": "Incomplete"
+                  },
+                  "host": {
+                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                    "operationId": "PatchItem",
+                    "connectionName": "shared_sharepointonline"
+                  }
+                }
+              },
+              "Email_missing_docs": {
+                "runAfter": {
+                  "Set_Incomplete": [
+                    "Succeeded"
+                  ]
+                },
+                "type": "OpenApiConnection",
+                "inputs": {
+                  "parameters": {
+                    "emailMessage/To": "@outputs('Create_item')?['body/Email']",
+                    "emailMessage/Subject": "Missing documents for your loan application",
+                    "emailMessage/Body": "<p class=\"editor-paragraph\">Hi @{outputs('Get_response_details')?['body/r0b1aa8dba74348e3a802a9791e110a76']},<br><br>Thanks for your loan application. We can't review it yet because some documents are missing. Please make sure you provide all four:<br><br>- IC copy<br>- 3 months' payslips<br>- 6 months' bank statements<br>- EPF statement<br><br>Please resubmit the form once you have them.</p>",
+                    "emailMessage/Importance": "Normal"
+                  },
+                  "host": {
+                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                    "operationId": "SendEmailV2",
+                    "connectionName": "shared_office365"
+                  }
+                }
+              }
+            }
+          },
+          "expression": {
+            "and": [
+              {
+                "contains": [
+                  "@outputs('Get_response_details')?['body/r2d461089bf2c4fb3b7ccaf7d1ef6a5a9']",
+                  "IC copy"
+                ]
+              },
+              {
+                "contains": [
+                  "@outputs('Get_response_details')?['body/r2d461089bf2c4fb3b7ccaf7d1ef6a5a9']",
+                  "payslips"
+                ]
+              },
+              {
+                "contains": [
+                  "@outputs('Get_response_details')?['body/r2d461089bf2c4fb3b7ccaf7d1ef6a5a9']",
+                  "bank statements"
+                ]
+              },
+              {
+                "contains": [
+                  "@outputs('Get_response_details')?['body/r2d461089bf2c4fb3b7ccaf7d1ef6a5a9']",
+                  "EPF statement"
+                ]
+              }
+            ]
+          },
+          "type": "If"
+        }
+      },
+      "outputs": {}
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}
