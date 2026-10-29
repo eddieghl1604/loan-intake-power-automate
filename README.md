@@ -16,11 +16,11 @@ Based on a manual process I worked with as a part-time mortgage consultant assis
 |DSR worked out on a calculator|Calculation mistakes, no consistent rule|
 |Reviewer chased by message|Delays, no status view, no audit trail|
 
-!\[Before](docs/process\_map\_before.png)
+<img width="2360" height="940" alt="image" src="https://github.com/eddieghl1604/loan-intake-power-automate/blob/main/docs/process_map_before.png" />
 
 ## The solution
 
-!\[After](docs/process\_map\_after.png)
+<img width="1800" height="1780" alt="image" src="https://github.com/eddieghl1604/loan-intake-power-automate/blob/main/docs/process_map_after.png" />
 
 1. **Microsoft Forms** collects the application.
 2. The flow saves it to a **SharePoint list** and calculates **DSR = (existing commitments + new instalment) ÷ net income × 100**.
